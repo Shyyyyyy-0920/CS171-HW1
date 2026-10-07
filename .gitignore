@@ -30,6 +30,36 @@
 *.exe
 *.out
 *.app
+CS171-HW1
+
+# Compiler and linker intermediates
+*.pdb
+*.ilk
+*.exp
+*.idb
+
+# CMake-generated files (including in-source builds)
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+CTestTestfile.cmake
+DartConfiguration.tcl
+Testing/
+Makefile
+build.ninja
+rules.ninja
+.ninja_deps
+.ninja_log
+compile_commands.json
+install_manifest.txt
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Git metadata copies; exclude the actual .git directory when packaging a submission.
+.git/
 
 # Directories
 .cache/
