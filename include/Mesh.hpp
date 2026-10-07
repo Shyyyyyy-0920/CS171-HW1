@@ -24,9 +24,9 @@
 // === ------------------------------------------------------------------------
 
 #pragma once
-
 #include "CS171.hpp"
 
+#include <glad/gl.h>
 #include <vector>
 
 namespace cs171 {
@@ -53,6 +53,7 @@ struct Vertex {
 /// See the following tutorial for an example of the complete setup and draw call:
 ///
 /// \see https://learnopengl.com/Getting-started/Hello-Triangle
+
 class Mesh {
 public:
   /// \brief Loads mesh data from the specified file and prepares it for rendering.
@@ -66,6 +67,9 @@ private:
   std::vector<Vertex> vertices_;
   // Triangle indices that assemble vertices into mesh faces.
   std::vector<Vec3u<>::AsStorage> indices_;
+  GLuint vao_{0};
+  GLuint vbo_{0};
+  GLuint ebo_{0};
 };
 
 } // namespace cs171
