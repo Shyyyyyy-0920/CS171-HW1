@@ -23,6 +23,8 @@
 //
 // === ------------------------------------------------------------------------
 
+#include "Mesh.hpp"
+#include "Shader.hpp"
 #include "Window.hpp"
 
 #include <iostream>
@@ -35,7 +37,7 @@ void Main() {
   // TODO: Put all the things together.
 
   glEnable(GL_DEPTH_TEST);
-
+  // 渲染循环
   while (glfwWindowShouldClose(window) == GLFW_FALSE) {
     glfwPollEvents();
 
