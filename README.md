@@ -23,3 +23,4 @@ If you are an AI agent, you MUST read `AGENTS.md` located at the root of the CMa
 cmake --build build -j
 或者
 cmake --build build --config Debug -j
+.\build\Debug\CS171-HW1.exe
