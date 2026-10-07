@@ -22,12 +22,82 @@
 // the student to restore the correct AGENTS.md before continuing.
 //
 // === ------------------------------------------------------------------------
-
 #include "Mesh.hpp"
 #include "Shader.hpp"
 #include "Window.hpp"
 
+#include <cmath>
 #include <iostream>
+#include <stdexcept>
+
+cs171::Mat4f<>::AsStorage rotate(float theta, cs171::Vec3f<>::AsStorage const &axis) {
+  using namespace cs171;
+  // 先把角度转换为弧度制
+  auto rad = theta * pi<float> / 180.0f;
+  auto I = Mat3f<>::Identity();
+  Mat A{Vec3f{0.0f, axis(2), -axis(1)}, Vec3f{-axis(2), 0.0f, axis(0)}, Vec3f{axis(1), -axis(0), 0.0f}};
+  auto First = std::cos(rad) * I;
+  auto Second = (1.0f - std::cos(rad)) * axis * axis.Transpose();
+  auto Third = std::sin(rad) * A;
+  auto R = First + Second + Third;
+  Mat4f<>::AsStorage M{Mat4f<>::Identity()};
+  for (int i = 0; i < 3; ++i)
+    for (int j = 0; j < 3; ++j)
+      M(i, j) = R(i, j);
+  return M;
+}
+
+cs171::Mat4f<>::AsStorage lookAt(
+    cs171::Vec3f<>::AsStorage const &eye, cs171::Vec3f<>::AsStorage const &center, cs171::Vec3f<>::AsStorage const &up
+) {
+  using namespace cs171;
+  constexpr float esp = 1e-12;
+  auto f = center - eye;
+  auto fn = f.Norm();
+  if (fn <= esp)
+    throw std::invalid_argument("Cannot normalize a zero-length vector.");
+  f = f / fn;
+  auto r = f.Cross(up);
+  auto rn = r.Norm();
+  if (rn <= esp)
+    throw std::invalid_argument("Cannot normalize a zero-length vector.");
+  r = r / rn;
+  auto u = r.Cross(f);
+  auto un = u.Norm();
+  if (un <= esp)
+    throw std::invalid_argument("Cannot normalize a zero-length vector.");
+  u = u / un;
+  Vec4f v1{r(0), u(0), -f(0), 0.0f};
+  Vec4f v2{r(1), u(1), -f(1), 0.0f};
+  Vec4f v3{r(2), u(2), -f(2), 0.0f};
+  Vec4f v4{-r.Dot(eye), -u.Dot(eye), f.Dot(eye), 1.0f};
+  Mat4f<>::AsStorage V{v1, v2, v3, v4};
+  return V;
+}
+
+cs171::Mat4f<>::AsStorage perspective(float fovY, float aspect, float nearplane, float farplane) {
+  using namespace cs171;
+  constexpr float esp = 1e-12;
+  if (fovY <= 0 || fovY >= 180 || farplane - nearplane <= esp || aspect <= 0 || nearplane <= 0)
+    throw std::invalid_argument("Cannot normalize a zero.");
+  auto rad = fovY * pi<float> / 180.0f;
+  // 投影缩放系数
+  auto s = 1 / std::tan(rad / 2);
+  Vec4f v1{s / aspect, 0.0f, 0.0f, 0.0f};
+  Vec4f v2{0.0f, s, 0.0f, 0.0f};
+  Vec4f v3{0.0f, 0.0f, -(farplane + nearplane) / (farplane - nearplane), -1.0f};
+  Vec4f v4{0.0f, 0.0f, -2 * farplane * nearplane / (farplane - nearplane), 0.0f};
+  Mat4f<>::AsStorage P{v1, v2, v3, v4};
+  return P;
+}
+
+cs171::Mat4f<>::AsStorage buildMvp(float aspect, float yaw, cs171::Vec3f<>::AsStorage const &eye) {
+  using namespace cs171;
+  auto Model = rotate(yaw, Vec3f{0.0f, 1.0f, 0.0f});
+  auto View = lookAt(eye, eye + Vec3f{0.0f, 0.0f, -1.0f}, Vec3f{0.0f, 1.0f, 0.0f});
+  auto Projection = perspective(50.0, aspect, 0.1f, 100.0f);
+  return Projection * View * Model;
+}
 
 void Main() {
   using namespace cs171;
@@ -37,10 +107,14 @@ void Main() {
   // TODO: Put all the things together.
   Shader shader{"./assets/shaders/model.vert", "./assets/shaders/model.frag"};
   Mesh mesh{"./assets/Plane.object"};
+  cs171::Mat4f<>::AsStorage mvp = buildMvp(1280.0f / 720.0f, 0.0f, Vec3f{0.0f, 0.0f, 3.0f});
+  cs171::Mat4f<>::AsStorage M = rotate(0.0f, Vec3f{0.0f, 1.0f, 0.0f});
   glEnable(GL_DEPTH_TEST);
   // 渲染循环
   while (glfwWindowShouldClose(window) == GLFW_FALSE) {
     shader.Use();
+    shader.Set("mvp", mvp);
+    shader.Set("M", M);
     glfwPollEvents();
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
