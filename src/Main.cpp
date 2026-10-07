@@ -99,20 +99,51 @@ void Main() {
   // TODO: Put all the things together.
   Shader shader{"./assets/shaders/model.vert", "./assets/shaders/model.frag"};
   Mesh mesh{"./assets/Plane.object"};
-  Vec3f eye{0.0f, 0.0f, 3.0f};
+
   float aspect = 1280.0f / 720.0f;
-  auto M = rotate(0.0f, Vec3f{0.0f, 1.0f, 0.0f});
-  auto V = lookAt(eye, eye + Vec3f{0.0f, 0.0f, -1.0f}, Vec3f{0.0f, 1.0f, 0.0f});
-  auto P = perspective(50.0, aspect, 0.1f, 100.0f);
+
   float ka = 0.15; // 环境光强度
   float ks = 0.5f; // 镜面反射系数
   float s = 32.0f; // 高光角度因子
+  Vec3f up{0.0f, 1.0f, 0.0f};
+  Vec3f direction{0.0f, 0.0f, -1.0f};
   Vec3f light{1.0f, 1.0f, 1.0f};
   Vec3f material{0.2f, 0.5f, 0.9f};
   Vec3f lightPosition{2.0f, 2.0f, 2.0f};
   glEnable(GL_DEPTH_TEST);
+  // 进入循环之前的时间记录
+  float last = static_cast<float>(glfwGetTime());
+  float yaw = 0.0f, distance = 3.0f;
   // 渲染循环
+  Vec3f eye{0.0f, 0.0f, distance};
   while (glfwWindowShouldClose(window) == GLFW_FALSE) {
+    float now = static_cast<float>(glfwGetTime());
+    float dt = now - last;
+    last = now;
+    glfwPollEvents();
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+      direction = Mat3f<>::AsStorage(rotate(60 * dt, Vec3f{0.0f, 1.0f, 0.0f})) * direction;
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+      direction = Mat3f<>::AsStorage(rotate(60 * -dt, Vec3f{0.0f, 1.0f, 0.0f})) * direction;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+      auto right = direction.Cross(up);
+      right = right / right.Norm();
+      eye = eye - 6 * dt * right;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+      auto right = direction.Cross(up);
+      right = right / right.Norm();
+      eye = eye + 6 * dt * right;
+    }
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+      eye = eye + 6 * dt * direction;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+      eye = eye - 6 * dt * direction;
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+      glfwSetWindowShouldClose(window, GLFW_TRUE);
+    auto M = rotate(yaw, Vec3f{0.0f, 1.0f, 0.0f});
+    auto V = lookAt(eye, eye + direction, Vec3f{0.0f, 1.0f, 0.0f});
+    auto P = perspective(50.0, aspect, 0.1f, 100.0f);
     shader.Use();
     shader.Set("eye", eye);
     shader.Set("s", s);
@@ -124,11 +155,6 @@ void Main() {
     shader.Set("light", light);
     shader.Set("material", material);
     shader.Set("lightPosition", lightPosition);
-    glfwPollEvents();
-
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-      glfwSetWindowShouldClose(window, GLFW_TRUE);
-
     glClearColor(0.1F, 0.2F, 0.3F, 1.0F);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     mesh.Draw();
