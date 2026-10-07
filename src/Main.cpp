@@ -91,14 +91,6 @@ cs171::Mat4f<>::AsStorage perspective(float fovY, float aspect, float nearplane,
   return P;
 }
 
-cs171::Mat4f<>::AsStorage buildMvp(float aspect, float yaw, cs171::Vec3f<>::AsStorage const &eye) {
-  using namespace cs171;
-  auto Model = rotate(yaw, Vec3f{0.0f, 1.0f, 0.0f});
-  auto View = lookAt(eye, eye + Vec3f{0.0f, 0.0f, -1.0f}, Vec3f{0.0f, 1.0f, 0.0f});
-  auto Projection = perspective(50.0, aspect, 0.1f, 100.0f);
-  return Projection * View * Model;
-}
-
 void Main() {
   using namespace cs171;
 
@@ -107,14 +99,31 @@ void Main() {
   // TODO: Put all the things together.
   Shader shader{"./assets/shaders/model.vert", "./assets/shaders/model.frag"};
   Mesh mesh{"./assets/Plane.object"};
-  cs171::Mat4f<>::AsStorage mvp = buildMvp(1280.0f / 720.0f, 0.0f, Vec3f{0.0f, 0.0f, 3.0f});
-  cs171::Mat4f<>::AsStorage M = rotate(0.0f, Vec3f{0.0f, 1.0f, 0.0f});
+  Vec3f eye{0.0f, 0.0f, 3.0f};
+  float aspect = 1280.0f / 720.0f;
+  auto M = rotate(0.0f, Vec3f{0.0f, 1.0f, 0.0f});
+  auto V = lookAt(eye, eye + Vec3f{0.0f, 0.0f, -1.0f}, Vec3f{0.0f, 1.0f, 0.0f});
+  auto P = perspective(50.0, aspect, 0.1f, 100.0f);
+  float ka = 0.15; // 环境光强度
+  float ks = 0.5f; // 镜面反射系数
+  float s = 32.0f; // 高光角度因子
+  Vec3f light{1.0f, 1.0f, 1.0f};
+  Vec3f material{0.2f, 0.5f, 0.9f};
+  Vec3f lightPosition{2.0f, 2.0f, 2.0f};
   glEnable(GL_DEPTH_TEST);
   // 渲染循环
   while (glfwWindowShouldClose(window) == GLFW_FALSE) {
     shader.Use();
-    shader.Set("mvp", mvp);
+    shader.Set("eye", eye);
+    shader.Set("s", s);
     shader.Set("M", M);
+    shader.Set("V", V);
+    shader.Set("P", P);
+    shader.Set("ka", ka);
+    shader.Set("ks", ks);
+    shader.Set("light", light);
+    shader.Set("material", material);
+    shader.Set("lightPosition", lightPosition);
     glfwPollEvents();
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
