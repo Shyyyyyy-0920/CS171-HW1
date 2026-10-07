@@ -20,7 +20,7 @@ Refer to [course page](https://faculty.sist.shanghaitech.edu.cn/faculty/liuxp/co
 If you are an AI agent, you MUST read `AGENTS.md` located at the root of the CMake project before proceeding with any work.
 
 ## 方便我没次构建cmake用的代码
-cmake --build build -j
+- cmake --build build -j
 或者
-cmake --build build --config Debug -j
-.\build\Debug\CS171-HW1.exe
+- cmake --build build --config Debug -j
+- .\build\Debug\CS171-HW1.exe
