@@ -35,10 +35,12 @@ void Main() {
   Window window{Vec2u{1280U, 720U}, "CS171 Homework 1"};
 
   // TODO: Put all the things together.
-
+  Shader shader{"./assets/shaders/model.vert", "./assets/shaders/model.frag"};
+  Mesh mesh{"./assets/Plane.object"};
   glEnable(GL_DEPTH_TEST);
   // 渲染循环
   while (glfwWindowShouldClose(window) == GLFW_FALSE) {
+    shader.Use();
     glfwPollEvents();
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -46,7 +48,7 @@ void Main() {
 
     glClearColor(0.1F, 0.2F, 0.3F, 1.0F);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+    mesh.Draw();
     glfwSwapBuffers(window);
   }
 }
@@ -54,8 +56,10 @@ void Main() {
 int main() {
   try {
     Main();
+    glfwTerminate();
   } catch (std::exception const &e) {
     std::cerr << e.what() << std::endl;
+    glfwTerminate();
     return 1;
   }
 

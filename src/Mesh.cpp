@@ -79,6 +79,12 @@ Mesh::Mesh(std::string const &path) {
   glEnableVertexAttribArray(1);
 }
 
+Mesh::~Mesh() noexcept {
+  glDeleteBuffers(1, &vbo_);
+  glDeleteBuffers(1, &ebo_);
+  glDeleteVertexArrays(1, &vao_);
+}
+
 void Mesh::Draw() const {
   // TODO: Your code here.
   glBindVertexArray(vao_);

@@ -1,7 +1,7 @@
 #version 330 core
-in vec3 color;
-out vec4 aColor;
+in vec3 normal;
+out vec4 anormal;
 void main()
 {
-aColor=vec4(color,1);
+anormal=vec4(normal,1);
 }

@@ -58,7 +58,9 @@ class Mesh {
 public:
   /// \brief Loads mesh data from the specified file and prepares it for rendering.
   explicit Mesh(std::string const &path);
-
+  ~Mesh() noexcept;
+  Mesh(Mesh const &) = delete;
+  Mesh &operator=(Mesh const &) = delete;
   /// \brief Draws the mesh using its configured OpenGL resources.
   void Draw() const;
 
