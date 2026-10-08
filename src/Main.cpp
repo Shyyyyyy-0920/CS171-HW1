@@ -90,9 +90,11 @@ void Main() {
   glfwSetWindowUserPointer(window, &mouse);
   // TODO: Put all the things together.
   Shader shader{"./assets/shaders/model.vert", "./assets/shaders/model.frag"};
+  Shader crosshairshader{"./assets/shaders/crosshair.vert", "./assets/shaders/crosshair.frag"};
   Mesh SphereMesh{"./assets/Sphere.object"};
   Mesh SphereMesh2{"./assets/Sphere.object"};
   Mesh BunnyMesh{"./assets/Bunny.object"};
+  Mesh PlaneMesh{"./assets/Plane.object"};
   // 变量声明阶段
   int select = -1; // -1代表未选中，0代表选择球体A，1代表选择球体B,2代表选中兔子
 
@@ -122,12 +124,17 @@ void Main() {
   Vec3f material{0.2f, 0.5f, 0.9f};
   Vec3f lightPosition{5.0f, 5.0f, 5.0f};
   Vec3f eye{0.0f, 0.0f, 3.0f};
+  // 物体的中心坐标
   Vec3f SphereCenterA{0.0f, 0.5f, 0.0f};
   Vec3f SphereCenterB{0.0f, 0.5f, 0.0f};
   Vec3f BunnyCenter{-0.01f, 0.11f, 0.0f};
+  Vec3f PlaneCenter{-0.01f, 0.11f, 0.0f};
+  // 物体的实时坐标
   Vec3f SphereAToPos{3.0f, 0.0f, 3.0f};
   Vec3f SphereBToPos{-3.0f, 0.0f, 3.0f};
   Vec3f BunnyToPos{0.0f, 5.0f, 3.0f};
+  Vec3f PlaneToPos{0.0f, -5.0f, 3.0f};
+
   Vec4f objectCatchPosition{0.0f, 0.0f, 0.0f, 1.0f}; // 用于在点选成功后保存抓取时的相机空间位置
   glEnable(GL_DEPTH_TEST);
   // 进入循环之前的时间记录
@@ -136,7 +143,8 @@ void Main() {
   glfwSetMouseButtonCallback(window, MouseButtonCallback); // 处理按键
   // 这种模式隐藏并捕获光标,能够持续转动视角，不受窗口边缘限制
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
+  GLuint crosshairVAO = 0;
+  glGenVertexArrays(1, &crosshairVAO);
   // 渲染循环
   while (glfwWindowShouldClose(window) == GLFW_FALSE) {
     float now = static_cast<float>(glfwGetTime());
@@ -261,9 +269,17 @@ void Main() {
     auto MC = BunnyT2 * BunnyS * BunnyT1;
     shader.Set("M", MC);
     BunnyMesh.Draw();
-
+    // 绘制准星
+    glDisable(GL_DEPTH_TEST);
+    crosshairshader.Use();
+    glBindVertexArray(crosshairVAO);
+    glPointSize(3.0f);
+    glDrawArrays(GL_POINTS, 0, 1);
+    glEnable(GL_DEPTH_TEST);
     glfwSwapBuffers(window);
+    glBindVertexArray(0);
   }
+  glDeleteVertexArrays(1, &crosshairVAO);
 }
 
 int main() {
