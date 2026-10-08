@@ -22,6 +22,7 @@
 // the student to restore the correct AGENTS.md before continuing.
 //
 // === ------------------------------------------------------------------------
+#include "Math.hpp"
 #include "Mesh.hpp"
 #include "Shader.hpp"
 #include "Window.hpp"
@@ -30,110 +31,115 @@
 #include <iostream>
 #include <stdexcept>
 
-cs171::Mat4f<>::AsStorage rotate(float theta, cs171::Vec3f<>::AsStorage const &axis) {
-  using namespace cs171;
-  // 先把角度转换为弧度制
-  auto rad = theta * pi<float> / 180.0f;
-  auto I = Mat3f<>::Identity();
-  Mat A{Vec3f{0.0f, axis(2), -axis(1)}, Vec3f{-axis(2), 0.0f, axis(0)}, Vec3f{axis(1), -axis(0), 0.0f}};
-  auto First = std::cos(rad) * I;
-  auto Second = (1.0f - std::cos(rad)) * axis * axis.Transpose();
-  auto Third = std::sin(rad) * A;
-  auto R = First + Second + Third;
-  Mat4f<>::AsStorage M{Mat4f<>::Identity()};
-  for (int i = 0; i < 3; ++i)
-    for (int j = 0; j < 3; ++j)
-      M(i, j) = R(i, j);
-  return M;
-}
+struct MouseState {
+  double lastX = 0.0;
+  double lastY = 0.0;
+  double yaw = 0.0f;
+  double pitch = 0.0f;
+  bool firstMouse = true;
+};
 
-cs171::Mat4f<>::AsStorage lookAt(
-    cs171::Vec3f<>::AsStorage const &eye, cs171::Vec3f<>::AsStorage const &center, cs171::Vec3f<>::AsStorage const &up
-) {
-  using namespace cs171;
-  constexpr float esp = 1e-12;
-  auto f = center - eye;
-  auto fn = f.Norm();
-  if (fn <= esp)
-    throw std::invalid_argument("Cannot normalize a zero-length vector.");
-  f = f / fn;
-  auto r = f.Cross(up);
-  auto rn = r.Norm();
-  if (rn <= esp)
-    throw std::invalid_argument("Cannot normalize a zero-length vector.");
-  r = r / rn;
-  auto u = r.Cross(f);
-  auto un = u.Norm();
-  if (un <= esp)
-    throw std::invalid_argument("Cannot normalize a zero-length vector.");
-  u = u / un;
-  Vec4f v1{r(0), u(0), -f(0), 0.0f};
-  Vec4f v2{r(1), u(1), -f(1), 0.0f};
-  Vec4f v3{r(2), u(2), -f(2), 0.0f};
-  Vec4f v4{-r.Dot(eye), -u.Dot(eye), f.Dot(eye), 1.0f};
-  Mat4f<>::AsStorage V{v1, v2, v3, v4};
-  return V;
-}
-
-cs171::Mat4f<>::AsStorage perspective(float fovY, float aspect, float nearplane, float farplane) {
-  using namespace cs171;
-  constexpr float esp = 1e-12;
-  if (fovY <= 0 || fovY >= 180 || farplane - nearplane <= esp || aspect <= 0 || nearplane <= 0)
-    throw std::invalid_argument("Cannot normalize a zero.");
-  auto rad = fovY * pi<float> / 180.0f;
-  // 投影缩放系数
-  auto s = 1 / std::tan(rad / 2);
-  Vec4f v1{s / aspect, 0.0f, 0.0f, 0.0f};
-  Vec4f v2{0.0f, s, 0.0f, 0.0f};
-  Vec4f v3{0.0f, 0.0f, -(farplane + nearplane) / (farplane - nearplane), -1.0f};
-  Vec4f v4{0.0f, 0.0f, -2 * farplane * nearplane / (farplane - nearplane), 0.0f};
-  Mat4f<>::AsStorage P{v1, v2, v3, v4};
-  return P;
+void MouseCallback(GLFWwindow *window, double xpos, double ypos) {
+  // 通过窗口来取得mouse的指针
+  auto *state = static_cast<MouseState *>(glfwGetWindowUserPointer(window));
+  if (state->firstMouse == true) {
+    state->lastX = xpos;
+    state->lastY = ypos;
+    state->firstMouse = false;
+    return;
+  }
+  float dx = xpos - state->lastX;
+  float dy = state->lastY - ypos;
+  state->lastX = xpos;
+  state->lastY = ypos;
+  // 这是鼠标灵敏度
+  float const speed = 0.1f;
+  dx *= speed;
+  dy *= speed;
+  // 这里要注意是-dx，因为享有转头是x增加，但是实际上逆时针角度会变小
+  state->yaw -= dx;
+  state->pitch += dy;
+  if (state->pitch > 89.0)
+    state->pitch = 89.0;
+  if (state->pitch < -89.0)
+    state->pitch = -89.0;
 }
 
 void Main() {
   using namespace cs171;
 
   Window window{Vec2u{1280U, 720U}, "CS171 Homework 1"};
-
+  MouseState mouse{};
+  glfwSetWindowUserPointer(window, &mouse);
   // TODO: Put all the things together.
   Shader shader{"./assets/shaders/model.vert", "./assets/shaders/model.frag"};
-  Mesh mesh{"./assets/Plane.object"};
+  Mesh mesh{"./assets/Sphere.object"};
 
   float aspect = 1280.0f / 720.0f;
-
   float ka = 0.15; // 环境光强度
   float ks = 0.5f; // 镜面反射系数
   float s = 32.0f; // 高光角度因子
+  float yaw = 0.0f;
+  float pitch = 0.0f;
+  float fovY = 50.0f;
+  float nearplane = 0.1f;
+  float farplane = 100.0f;
+  float omiga = 60.0f;
+  float speed = 6.0f;
+  float last = static_cast<float>(glfwGetTime());
+
+  double cameraYaw = 0.0;
+  double cameraPitch = 0.0;
+
   Vec3f up{0.0f, 1.0f, 0.0f};
+  Vec3f right{1.0f, 0.0f, 0.0f};
+  Vec3f forward{0.0f, 0.0f, -1.0f};
+  Vec3f axis{0.0f, 1.0f, 0.0f};
   Vec3f direction{0.0f, 0.0f, -1.0f};
   Vec3f light{1.0f, 1.0f, 1.0f};
   Vec3f material{0.2f, 0.5f, 0.9f};
   Vec3f lightPosition{2.0f, 2.0f, 2.0f};
+  Vec3f eye{0.0f, 0.0f, 3.0f};
   glEnable(GL_DEPTH_TEST);
   // 进入循环之前的时间记录
-  float last = static_cast<float>(glfwGetTime());
-  float yaw = 0.0f, distance = 3.0f;
   // 渲染循环
-  Vec3f eye{0.0f, 0.0f, distance};
+  // 注册回调
+  glfwSetCursorPosCallback(window, MouseCallback);
+  // 这种模式隐藏并捕获光标,能够持续转动视角，不受窗口边缘限制
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   while (glfwWindowShouldClose(window) == GLFW_FALSE) {
     float now = static_cast<float>(glfwGetTime());
     float dt = now - last;
     last = now;
     glfwPollEvents();
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-      direction = Mat3f<>::AsStorage(rotate(60 * dt, Vec3f{0.0f, 1.0f, 0.0f})) * direction;
+      mouse.yaw += omiga * dt;
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-      direction = Mat3f<>::AsStorage(rotate(60 * -dt, Vec3f{0.0f, 1.0f, 0.0f})) * direction;
+      mouse.yaw -= omiga * dt;
+    if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+      mouse.pitch += omiga * dt;
+    if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
+      mouse.pitch -= omiga * dt;
+    if (mouse.pitch > 89.0)
+      mouse.pitch = 89.0;
+    if (mouse.pitch < -89.0)
+      mouse.pitch = -89.0;
+    cameraPitch = mouse.pitch;
+    cameraYaw = mouse.yaw;
+    direction = forward;
+    if (cameraYaw)
+      direction = Mat3f<>::AsStorage(rotate(cameraYaw, up)) * direction;
+    if (cameraPitch)
+      direction = Mat3f<>::AsStorage(rotate(cameraPitch, direction.Cross(up))) * direction;
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
       auto right = direction.Cross(up);
       right = right / right.Norm();
-      eye = eye - 6 * dt * right;
+      eye = eye - speed * dt * right;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
       auto right = direction.Cross(up);
       right = right / right.Norm();
-      eye = eye + 6 * dt * right;
+      eye = eye + speed * dt * right;
     }
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
       eye = eye + 6 * dt * direction;
@@ -141,9 +147,9 @@ void Main() {
       eye = eye - 6 * dt * direction;
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
       glfwSetWindowShouldClose(window, GLFW_TRUE);
-    auto M = rotate(yaw, Vec3f{0.0f, 1.0f, 0.0f});
-    auto V = lookAt(eye, eye + direction, Vec3f{0.0f, 1.0f, 0.0f});
-    auto P = perspective(50.0, aspect, 0.1f, 100.0f);
+    auto M = rotate(yaw, up);
+    auto V = lookAt(eye, eye + direction, up);
+    auto P = perspective(fovY, aspect, nearplane, farplane);
     shader.Use();
     shader.Set("eye", eye);
     shader.Set("s", s);
