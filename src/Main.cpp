@@ -37,6 +37,9 @@ struct MouseState {
   double yaw = 0.0f;
   double pitch = 0.0f;
   bool firstMouse = true;
+  bool leftDown = false;
+  bool leftPressed = false;
+  bool leftReleased = false;
 };
 
 void MouseCallback(GLFWwindow *window, double xpos, double ypos) {
@@ -65,6 +68,20 @@ void MouseCallback(GLFWwindow *window, double xpos, double ypos) {
     state->pitch = -89.0;
 }
 
+void MouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
+  auto *state = static_cast<MouseState *>(glfwGetWindowUserPointer(window));
+  if (button == GLFW_MOUSE_BUTTON_LEFT) {
+    if (action == GLFW_PRESS) {
+      state->leftDown = true;
+      state->leftPressed = true;
+    }
+    if (action == GLFW_RELEASE) {
+      state->leftReleased = true;
+      state->leftDown = false;
+    }
+  }
+}
+
 void Main() {
   using namespace cs171;
 
@@ -76,6 +93,8 @@ void Main() {
   Mesh SphereMesh{"./assets/Sphere.object"};
   Mesh SphereMesh2{"./assets/Sphere.object"};
   // 变量声明阶段
+  int select = -1; // -1代表未选中，0代表选择球体A，1代表选择球体B
+
   float aspect = 1280.0f / 720.0f;
   float ka = 0.15; // 环境光强度
   float ks = 0.5f; // 镜面反射系数
@@ -101,12 +120,19 @@ void Main() {
   Vec3f material{0.2f, 0.5f, 0.9f};
   Vec3f lightPosition{5.0f, 5.0f, 5.0f};
   Vec3f eye{0.0f, 0.0f, 3.0f};
+  Vec3f SphereCenterA{0.0f, 0.5f, 0.0f};
+  Vec3f SphereCenterB{0.0f, 0.5f, 0.0f};
+  Vec3f SphereAToPos{3.0f, 0.0f, 3.0f};
+  Vec3f SphereBToPos{-3.0f, 0.0f, 3.0f};
+  Vec4f objectCatchPosition{0.0f, 0.0f, 0.0f, 1.0f}; // 用于在点选成功后保存抓取时的相机空间位置
   glEnable(GL_DEPTH_TEST);
   // 进入循环之前的时间记录
   // 注册回调
-  glfwSetCursorPosCallback(window, MouseCallback);
+  glfwSetCursorPosCallback(window, MouseCallback);         // 处理移动
+  glfwSetMouseButtonCallback(window, MouseButtonCallback); // 处理按键
   // 这种模式隐藏并捕获光标,能够持续转动视角，不受窗口边缘限制
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
   // 渲染循环
   while (glfwWindowShouldClose(window) == GLFW_FALSE) {
     float now = static_cast<float>(glfwGetTime());
@@ -154,10 +180,46 @@ void Main() {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
       glfwSetWindowShouldClose(window, GLFW_TRUE);
     // 矩阵位移矩阵生成与画图形
-    auto MA = translation(Vec3f{0.0f, 0.5f, 0.0f}, Vec3f{3.0f, 0.0f, 3.0f});
+
     auto V = lookAt(eye, eye + direction, up);
+
+    // 鼠标点击的作用
+    if (mouse.leftPressed) {
+      float tA = OnSphere(eye, direction, 2.55f, SphereAToPos);
+      float tB = OnSphere(eye, direction, 2.55f, SphereBToPos);
+      if (tA > 0 && tB > 0)
+        select = tA > tB ? 1 : 0;
+      if (tA == 0 && tB == 0)
+        select = -1;
+      if (tA > 0 && tB == 0)
+        select = 0;
+      if (tA == 0 && tB > 0)
+        select = 1;
+
+      if (select == 0) {
+        Vec4f homogeneous{SphereAToPos(0), SphereAToPos(1), SphereAToPos(2), 1.0f};
+        objectCatchPosition = V * homogeneous;
+      }
+      if (select == 1) {
+        Vec4f homogeneous{SphereBToPos(0), SphereBToPos(1), SphereBToPos(2), 1.0f};
+        objectCatchPosition = V * homogeneous;
+      }
+      mouse.leftPressed = false;
+    }
+    if (mouse.leftReleased) {
+      select = -1;
+
+      mouse.leftReleased = false;
+    }
+    if (select == 0) {
+      auto temp = V.Inverse() * objectCatchPosition;
+      Vec3f position{temp(0), temp(1), temp(2)};
+      SphereAToPos = position;
+    }
+    auto MA = translation(SphereCenterA, SphereAToPos);
     auto P = perspective(fovY, aspect, nearplane, farplane);
     shader.Use();
+
     shader.Set("eye", eye);
     shader.Set("s", s);
     shader.Set("M", MA);
@@ -168,11 +230,18 @@ void Main() {
     shader.Set("light", light);
     shader.Set("material", material);
     shader.Set("lightPosition", lightPosition);
+
     glClearColor(0.1F, 0.2F, 0.3F, 1.0F);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     SphereMesh.Draw();
-    auto MB = translation(Vec3f{0.0f, 0.5f, 0.0f}, Vec3f{-3.0f, 0.0f, 3.0f});
+    if (select == 1) {
+      auto temp = V.Inverse() * objectCatchPosition;
+      Vec3f position{temp(0), temp(1), temp(2)};
+      SphereBToPos = position;
+    }
+    auto MB = translation(SphereCenterB, SphereBToPos);
     shader.Set("M", MB);
+
     SphereMesh2.Draw();
     glfwSwapBuffers(window);
   }
@@ -187,6 +256,5 @@ int main() {
     glfwTerminate();
     return 1;
   }
-
   return 0;
 }

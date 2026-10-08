@@ -75,4 +75,34 @@ Mat4f<>::AsStorage perspective(float fovY, float aspect, float nearplane, float 
   Mat4f<>::AsStorage P{v1, v2, v3, v4};
   return P;
 }
+
+float OnSphere(
+    Vec3f<>::AsStorage const &eye, Vec3f<>::AsStorage const &direction, float R, Vec3f<>::AsStorage const &center
+) {
+  constexpr float esp = 1e-12;
+  auto ldl = direction.Norm();
+  if (ldl < esp)
+    throw std::invalid_argument("Cannot normalize a zero.");
+  auto d = direction / ldl;
+  auto v = eye - center;
+  auto lvl = v.Norm();
+  if (lvl < esp)
+    return R / ldl;
+  v = v / lvl;
+  // 设定一个容差，用于判断直线与球面相切的情况，给一定容错
+  float const sigma = 8 * 1e-7 * std::max(R * R, lvl * lvl);
+  float cosTheta = v.Dot(d);
+  float delta = R * R - (1 - cosTheta * cosTheta) * lvl * lvl;
+  if (delta < -sigma)
+    return 0.0f;
+  if (std::abs(delta) <= sigma)
+    delta = 0.0f;
+  auto t1 = (std::sqrt(delta) - lvl * cosTheta) / ldl;
+  auto t2 = (-std::sqrt(delta) - lvl * cosTheta) / ldl;
+  if (t1 > esp && t2 > esp)
+    return std::min(t1, t2);
+  if (t1 <= esp && t2 <= esp)
+    return 0.0f;
+  return t1;
+}
 } // namespace cs171

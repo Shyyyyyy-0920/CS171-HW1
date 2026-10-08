@@ -14,4 +14,8 @@ Mat4f<>::AsStorage
 lookAt(Vec3f<>::AsStorage const &eye, Vec3f<>::AsStorage const &center, Vec3f<>::AsStorage const &up);
 
 Mat4f<>::AsStorage perspective(float fovY, float aspect, float nearplane, float farplane);
+
+float OnSphere(
+    Vec3f<>::AsStorage const &eye, Vec3f<>::AsStorage const &direction, float R, Vec3f<>::AsStorage const &center
+);
 } // namespace cs171
