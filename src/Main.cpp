@@ -92,8 +92,9 @@ void Main() {
   Shader shader{"./assets/shaders/model.vert", "./assets/shaders/model.frag"};
   Mesh SphereMesh{"./assets/Sphere.object"};
   Mesh SphereMesh2{"./assets/Sphere.object"};
+  Mesh BunnyMesh{"./assets/Bunny.object"};
   // 变量声明阶段
-  int select = -1; // -1代表未选中，0代表选择球体A，1代表选择球体B
+  int select = -1; // -1代表未选中，0代表选择球体A，1代表选择球体B,2代表选中兔子
 
   float aspect = 1280.0f / 720.0f;
   float ka = 0.15; // 环境光强度
@@ -111,6 +112,7 @@ void Main() {
   double cameraYaw = 0.0;
   double cameraPitch = 0.0;
 
+  Vec3f origin{0.0f, 0.0f, 0.0f};
   Vec3f up{0.0f, 1.0f, 0.0f};
   Vec3f right{1.0f, 0.0f, 0.0f};
   Vec3f forward{0.0f, 0.0f, -1.0f};
@@ -122,8 +124,10 @@ void Main() {
   Vec3f eye{0.0f, 0.0f, 3.0f};
   Vec3f SphereCenterA{0.0f, 0.5f, 0.0f};
   Vec3f SphereCenterB{0.0f, 0.5f, 0.0f};
+  Vec3f BunnyCenter{-0.01f, 0.11f, 0.0f};
   Vec3f SphereAToPos{3.0f, 0.0f, 3.0f};
   Vec3f SphereBToPos{-3.0f, 0.0f, 3.0f};
+  Vec3f BunnyToPos{0.0f, 5.0f, 3.0f};
   Vec4f objectCatchPosition{0.0f, 0.0f, 0.0f, 1.0f}; // 用于在点选成功后保存抓取时的相机空间位置
   glEnable(GL_DEPTH_TEST);
   // 进入循环之前的时间记录
@@ -211,18 +215,10 @@ void Main() {
 
       mouse.leftReleased = false;
     }
-    if (select == 0) {
-      auto temp = V.Inverse() * objectCatchPosition;
-      Vec3f position{temp(0), temp(1), temp(2)};
-      SphereAToPos = position;
-    }
-    auto MA = translation(SphereCenterA, SphereAToPos);
     auto P = perspective(fovY, aspect, nearplane, farplane);
     shader.Use();
-
     shader.Set("eye", eye);
     shader.Set("s", s);
-    shader.Set("M", MA);
     shader.Set("V", V);
     shader.Set("P", P);
     shader.Set("ka", ka);
@@ -230,10 +226,19 @@ void Main() {
     shader.Set("light", light);
     shader.Set("material", material);
     shader.Set("lightPosition", lightPosition);
-
     glClearColor(0.1F, 0.2F, 0.3F, 1.0F);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // 画A球体
+    if (select == 0) {
+      auto temp = V.Inverse() * objectCatchPosition;
+      Vec3f position{temp(0), temp(1), temp(2)};
+      SphereAToPos = position;
+    }
+    auto MA = translation(SphereCenterA, SphereAToPos);
+    shader.Set("M", MA);
     SphereMesh.Draw();
+
+    // 画B球体
     if (select == 1) {
       auto temp = V.Inverse() * objectCatchPosition;
       Vec3f position{temp(0), temp(1), temp(2)};
@@ -241,8 +246,16 @@ void Main() {
     }
     auto MB = translation(SphereCenterB, SphereBToPos);
     shader.Set("M", MB);
-
     SphereMesh2.Draw();
+
+    // 画兔子
+    auto BunnyT1 = translation(BunnyCenter, origin);
+    auto BunnyT2 = translation(origin, BunnyToPos);
+    auto BunnyS = scale(20.0f);
+    auto MC = BunnyT2 * BunnyS * BunnyT1;
+    shader.Set("M", MC);
+    BunnyMesh.Draw();
+
     glfwSwapBuffers(window);
   }
 }

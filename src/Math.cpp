@@ -26,6 +26,14 @@ Mat4f<>::AsStorage rotate(float theta, Vec3f<>::AsStorage const &axis) {
   return M;
 }
 
+Mat4f<>::AsStorage scale(float s) {
+  Mat4f<>::AsStorage S{Mat4f<>::Identity()};
+  S(0, 0) = s;
+  S(1, 1) = s;
+  S(2, 2) = s;
+  return S;
+}
+
 Mat4f<>::AsStorage translation(Vec3f<>::AsStorage pos, Vec3f<>::AsStorage center) {
   Mat4f<>::AsStorage T{Mat4f<>::Identity()};
   auto direction = center - pos;
