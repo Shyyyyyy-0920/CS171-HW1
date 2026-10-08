@@ -73,8 +73,9 @@ void Main() {
   glfwSetWindowUserPointer(window, &mouse);
   // TODO: Put all the things together.
   Shader shader{"./assets/shaders/model.vert", "./assets/shaders/model.frag"};
-  Mesh mesh{"./assets/Sphere.object"};
-
+  Mesh SphereMesh{"./assets/Sphere.object"};
+  Mesh SphereMesh2{"./assets/Sphere.object"};
+  // 变量声明阶段
   float aspect = 1280.0f / 720.0f;
   float ka = 0.15; // 环境光强度
   float ks = 0.5f; // 镜面反射系数
@@ -98,20 +99,21 @@ void Main() {
   Vec3f direction{0.0f, 0.0f, -1.0f};
   Vec3f light{1.0f, 1.0f, 1.0f};
   Vec3f material{0.2f, 0.5f, 0.9f};
-  Vec3f lightPosition{2.0f, 2.0f, 2.0f};
+  Vec3f lightPosition{5.0f, 5.0f, 5.0f};
   Vec3f eye{0.0f, 0.0f, 3.0f};
   glEnable(GL_DEPTH_TEST);
   // 进入循环之前的时间记录
-  // 渲染循环
   // 注册回调
   glfwSetCursorPosCallback(window, MouseCallback);
   // 这种模式隐藏并捕获光标,能够持续转动视角，不受窗口边缘限制
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+  // 渲染循环
   while (glfwWindowShouldClose(window) == GLFW_FALSE) {
     float now = static_cast<float>(glfwGetTime());
     float dt = now - last;
     last = now;
     glfwPollEvents();
+    // 坐标处理阶段
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
       mouse.yaw += omiga * dt;
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
@@ -141,19 +143,24 @@ void Main() {
       right = right / right.Norm();
       eye = eye + speed * dt * right;
     }
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+      eye = eye + speed * dt * Vec3f{0.0f, 1.0f, 0.0f};
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+      eye = eye - speed * dt * Vec3f{0.0f, 1.0f, 0.0f};
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
       eye = eye + 6 * dt * direction;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
       eye = eye - 6 * dt * direction;
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
       glfwSetWindowShouldClose(window, GLFW_TRUE);
-    auto M = rotate(yaw, up);
+    // 矩阵位移矩阵生成与画图形
+    auto MA = translation(Vec3f{0.0f, 0.5f, 0.0f}, Vec3f{3.0f, 0.0f, 3.0f});
     auto V = lookAt(eye, eye + direction, up);
     auto P = perspective(fovY, aspect, nearplane, farplane);
     shader.Use();
     shader.Set("eye", eye);
     shader.Set("s", s);
-    shader.Set("M", M);
+    shader.Set("M", MA);
     shader.Set("V", V);
     shader.Set("P", P);
     shader.Set("ka", ka);
@@ -163,7 +170,10 @@ void Main() {
     shader.Set("lightPosition", lightPosition);
     glClearColor(0.1F, 0.2F, 0.3F, 1.0F);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    mesh.Draw();
+    SphereMesh.Draw();
+    auto MB = translation(Vec3f{0.0f, 0.5f, 0.0f}, Vec3f{-3.0f, 0.0f, 3.0f});
+    shader.Set("M", MB);
+    SphereMesh2.Draw();
     glfwSwapBuffers(window);
   }
 }

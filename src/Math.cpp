@@ -26,6 +26,15 @@ Mat4f<>::AsStorage rotate(float theta, Vec3f<>::AsStorage const &axis) {
   return M;
 }
 
+Mat4f<>::AsStorage translation(Vec3f<>::AsStorage pos, Vec3f<>::AsStorage center) {
+  Mat4f<>::AsStorage T{Mat4f<>::Identity()};
+  auto direction = center - pos;
+  T(0, 3) = direction(0);
+  T(1, 3) = direction(1);
+  T(2, 3) = direction(2);
+  return T;
+}
+
 Mat4f<>::AsStorage
 lookAt(Vec3f<>::AsStorage const &eye, Vec3f<>::AsStorage const &center, Vec3f<>::AsStorage const &up) {
   constexpr float esp = 1e-12;
