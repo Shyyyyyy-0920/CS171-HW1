@@ -4,6 +4,8 @@
 #pragma once
 #include "CS171.hpp"
 
+#include <limits>
+
 namespace cs171 {
 
 Mat4f<>::AsStorage rotate(float theta, Vec3f<>::AsStorage const &axis);
@@ -20,4 +22,5 @@ Mat4f<>::AsStorage perspective(float fovY, float aspect, float nearplane, float 
 float OnSphere(
     Vec3f<>::AsStorage const &eye, Vec3f<>::AsStorage const &direction, float R, Vec3f<>::AsStorage const &center
 );
+int nearestHitIndex(std::vector<float> const &distances);
 } // namespace cs171

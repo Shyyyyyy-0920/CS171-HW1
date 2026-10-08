@@ -35,6 +35,7 @@
 #include <Arietta/Mat.hpp>
 #include <numbers>
 #include <string>
+#include <vector>
 
 namespace cs171 {
 

@@ -113,4 +113,18 @@ float OnSphere(
     return 0.0f;
   return t1;
 }
+
+int nearestHitIndex(std::vector<float> const &distances) {
+  auto infty = std::numeric_limits<float>::infinity();
+  int n = -1;
+  for (int i = 0; i < distances.size(); ++i) {
+    float t = distances[i];
+    if (t > 0 && t < infty) {
+      infty = t;
+      n = i;
+    }
+  }
+  return n;
+}
+
 } // namespace cs171

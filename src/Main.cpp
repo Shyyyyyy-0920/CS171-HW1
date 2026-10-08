@@ -189,23 +189,24 @@ void Main() {
 
     // 鼠标点击的作用
     if (mouse.leftPressed) {
+      std::vector<float> T;
       float tA = OnSphere(eye, direction, 2.55f, SphereAToPos);
       float tB = OnSphere(eye, direction, 2.55f, SphereBToPos);
-      if (tA > 0 && tB > 0)
-        select = tA > tB ? 1 : 0;
-      if (tA == 0 && tB == 0)
-        select = -1;
-      if (tA > 0 && tB == 0)
-        select = 0;
-      if (tA == 0 && tB > 0)
-        select = 1;
-
+      float tC = OnSphere(eye, direction, 2.19f, BunnyToPos);
+      T.push_back(tA);
+      T.push_back(tB);
+      T.push_back(tC);
+      select = nearestHitIndex(T);
       if (select == 0) {
         Vec4f homogeneous{SphereAToPos(0), SphereAToPos(1), SphereAToPos(2), 1.0f};
         objectCatchPosition = V * homogeneous;
       }
       if (select == 1) {
         Vec4f homogeneous{SphereBToPos(0), SphereBToPos(1), SphereBToPos(2), 1.0f};
+        objectCatchPosition = V * homogeneous;
+      }
+      if (select == 2) {
+        Vec4f homogeneous{BunnyToPos(0), BunnyToPos(1), BunnyToPos(2), 1.0f};
         objectCatchPosition = V * homogeneous;
       }
       mouse.leftPressed = false;
@@ -249,6 +250,11 @@ void Main() {
     SphereMesh2.Draw();
 
     // 画兔子
+    if (select == 2) {
+      auto temp = V.Inverse() * objectCatchPosition;
+      Vec3f position{temp(0), temp(1), temp(2)};
+      BunnyToPos = position;
+    }
     auto BunnyT1 = translation(BunnyCenter, origin);
     auto BunnyT2 = translation(origin, BunnyToPos);
     auto BunnyS = scale(20.0f);
