@@ -114,6 +114,41 @@ float OnSphere(
   return t1;
 }
 
+float OnPlane(
+    Vec3f<>::AsStorage const &eye,
+    Vec3f<>::AsStorage const &direction,
+    float R,
+    Vec3f<>::AsStorage const &center,
+    Vec3f<>::AsStorage const &normal
+) {
+  constexpr float esp = 1e-12;
+  auto ldl = direction.Norm();
+  if (ldl < esp)
+    throw std::invalid_argument("Cannot normalize a zero.");
+  auto d = direction / ldl;
+
+  auto v = center - eye;
+
+  auto lnl = normal.Norm();
+  if (lnl < esp)
+    throw std::invalid_argument("Cannot normalize a zero.");
+  auto n = normal / lnl;
+
+  auto low = d.Dot(n);
+  auto up = v.Dot(n);
+  // 这里用绝对值只是为了排除趋近于0也就是平行时的情况
+  if (std::abs(low) < esp)
+    return 0.0f;
+  auto t = up / low;
+  if (t <= esp)
+    return 0.0f;
+  // 交点P
+  auto p = eye + t * d;
+  if (std::abs(p(0) - center(0)) <= R && std::abs(p(1) - center(1)) <= R)
+    return t / ldl;
+  return 0.0f;
+}
+
 int nearestHitIndex(std::vector<float> const &distances) {
   auto infty = std::numeric_limits<float>::infinity();
   int n = -1;

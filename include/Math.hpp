@@ -22,5 +22,13 @@ Mat4f<>::AsStorage perspective(float fovY, float aspect, float nearplane, float 
 float OnSphere(
     Vec3f<>::AsStorage const &eye, Vec3f<>::AsStorage const &direction, float R, Vec3f<>::AsStorage const &center
 );
+float OnPlane(
+    Vec3f<>::AsStorage const &eye,
+    Vec3f<>::AsStorage const &direction,
+    float R,
+    Vec3f<>::AsStorage const &center,
+    Vec3f<>::AsStorage const &normal
+);
+
 int nearestHitIndex(std::vector<float> const &distances);
 } // namespace cs171

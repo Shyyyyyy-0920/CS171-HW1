@@ -128,7 +128,7 @@ void Main() {
   Vec3f SphereCenterA{0.0f, 0.5f, 0.0f};
   Vec3f SphereCenterB{0.0f, 0.5f, 0.0f};
   Vec3f BunnyCenter{-0.01f, 0.11f, 0.0f};
-  Vec3f PlaneCenter{-0.01f, 0.11f, 0.0f};
+  Vec3f PlaneCenter{0.0f, 0.0f, -1.0f};
   // 物体的实时坐标
   Vec3f SphereAToPos{3.0f, 0.0f, 3.0f};
   Vec3f SphereBToPos{-3.0f, 0.0f, 3.0f};
@@ -201,9 +201,11 @@ void Main() {
       float tA = OnSphere(eye, direction, 2.55f, SphereAToPos);
       float tB = OnSphere(eye, direction, 2.55f, SphereBToPos);
       float tC = OnSphere(eye, direction, 2.19f, BunnyToPos);
+      float tD = OnPlane(eye, direction, 1.0f, PlaneToPos, Vec3f{0.0f, 0.0f, 1.0f});
       T.push_back(tA);
       T.push_back(tB);
       T.push_back(tC);
+      T.push_back(tD);
       select = nearestHitIndex(T);
       if (select == 0) {
         Vec4f homogeneous{SphereAToPos(0), SphereAToPos(1), SphereAToPos(2), 1.0f};
@@ -215,6 +217,10 @@ void Main() {
       }
       if (select == 2) {
         Vec4f homogeneous{BunnyToPos(0), BunnyToPos(1), BunnyToPos(2), 1.0f};
+        objectCatchPosition = V * homogeneous;
+      }
+      if (select == 3) {
+        Vec4f homogeneous{PlaneToPos(0), PlaneToPos(1), PlaneToPos(2), 1.0f};
         objectCatchPosition = V * homogeneous;
       }
       mouse.leftPressed = false;
@@ -269,6 +275,15 @@ void Main() {
     auto MC = BunnyT2 * BunnyS * BunnyT1;
     shader.Set("M", MC);
     BunnyMesh.Draw();
+    // 绘制平面
+    if (select == 3) {
+      auto temp = V.Inverse() * objectCatchPosition;
+      Vec3f position{temp(0), temp(1), temp(2)};
+      PlaneToPos = position;
+    }
+    auto MD = translation(PlaneCenter, PlaneToPos);
+    shader.Set("M", MD);
+    PlaneMesh.Draw();
     // 绘制准星
     glDisable(GL_DEPTH_TEST);
     crosshairshader.Use();
