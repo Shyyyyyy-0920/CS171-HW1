@@ -22,10 +22,13 @@
 // the student to restore the correct AGENTS.md before continuing.
 //
 // === ------------------------------------------------------------------------
+
 #include "Math.hpp"
 #include "Mesh.hpp"
 #include "Shader.hpp"
 #include "Window.hpp"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 #include <cmath>
 #include <iostream>
@@ -99,6 +102,18 @@ struct Object {
   cs171::Vec3f<>::AsStorage Position;
   float Scale = 1.0f;
 };
+
+// 图片
+unsigned char *loadImage(std::string const &path, int &width, int &height, int &channels) {
+  // 调用图片读取函数
+  unsigned char *pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb);
+  if (pixels) {
+    std::cerr << path << stbi_failure_reason() << std::endl;
+    stbi_image_free(pixels);
+  }
+  std::cout << width << " " << height << " " << channels << std::endl;
+  return pixels;
+}
 
 void Main() {
   using namespace cs171;
@@ -178,6 +193,7 @@ void Main() {
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   GLuint crosshairVAO = 0;
   glGenVertexArrays(1, &crosshairVAO);
+
   // 渲染循环
   while (glfwWindowShouldClose(window) == GLFW_FALSE) {
     float now = static_cast<float>(glfwGetTime());
