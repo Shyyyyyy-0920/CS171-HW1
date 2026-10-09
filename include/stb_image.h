@@ -1,3 +1,18 @@
+/*
+负责把各种格式的图片解码为内存中的像素数据
+只能在一个cpp中定义#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"不能放进公共头文件,因为这个文件把函数声明和函数实现放在
+同一个文件里，宏决定是否生成实现，如果只写include，只能得到函数叫什么等，只有
+定义宏后才能获取具体实现
+
+下面这个函数的作用时尝试读取其中一张图片，需要三个int 变量来接受“宽度”“高度”和“原图通道数”
+path是图片文件路径字符串，可以使用已经有的pathof来帮助定位文件
+stbi_rgb要求返回的数据统一位RGB，每个像素三个字节
+读取成功时打印宽度高度和通道数，失败时用stbi_failure_reason()查看原因
+本阶段检查结束后，用stbi_image_free(pixels)释放读取的像素内存。
+unsigned char* pixels =
+    stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb);
+*/
 /* stb_image - v2.30 - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 

@@ -26,9 +26,8 @@
 #include "Math.hpp"
 #include "Mesh.hpp"
 #include "Shader.hpp"
+#include "Texture.hpp"
 #include "Window.hpp"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 
 #include <cmath>
 #include <iostream>
@@ -103,18 +102,6 @@ struct Object {
   float Scale = 1.0f;
 };
 
-// 图片
-unsigned char *loadImage(std::string const &path, int &width, int &height, int &channels) {
-  // 调用图片读取函数
-  unsigned char *pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb);
-  if (pixels) {
-    std::cerr << path << stbi_failure_reason() << std::endl;
-    stbi_image_free(pixels);
-  }
-  std::cout << width << " " << height << " " << channels << std::endl;
-  return pixels;
-}
-
 void Main() {
   using namespace cs171;
 
@@ -124,10 +111,12 @@ void Main() {
   // TODO: Put all the things together.
   Shader shader{"./assets/shaders/model.vert", "./assets/shaders/model.frag"};
   Shader crosshairshader{"./assets/shaders/crosshair.vert", "./assets/shaders/crosshair.frag"};
+  Shader skyboxshader{"./assets/shaders/skybox.vert", "./assets/shaders/skybox.frag"};
   Mesh SphereMesh{"./assets/Sphere.object"};
   Mesh SphereMesh2{"./assets/Sphere.object"};
   Mesh BunnyMesh{"./assets/Bunny.object"};
   Mesh PlaneMesh{"./assets/Plane.object"};
+  Mesh skyboxMesh{"./assets/Cube.object"};
   // 变量声明阶段
   // 点光源
   PointLight PL1;
@@ -184,6 +173,15 @@ void Main() {
   // 物体的放大倍数
   Bunny.Scale = 20.0f;
   Vec4f objectCatchPosition{0.0f, 0.0f, 0.0f, 1.0f}; // 用于在点选成功后保存抓取时的相机空间位置
+  // Texture加载
+  std::vector<std::string> paths;
+  paths.push_back("./assets/skybox/posx.jpg");
+  paths.push_back("./assets/skybox/negx.jpg");
+  paths.push_back("./assets/skybox/posy.jpg");
+  paths.push_back("./assets/skybox/negy.jpg");
+  paths.push_back("./assets/skybox/posz.jpg");
+  paths.push_back("./assets/skybox/negz.jpg");
+  Texture texture{paths};
   glEnable(GL_DEPTH_TEST);
   // 进入循环之前的时间记录
   // 注册回调
@@ -193,7 +191,6 @@ void Main() {
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   GLuint crosshairVAO = 0;
   glGenVertexArrays(1, &crosshairVAO);
-
   // 渲染循环
   while (glfwWindowShouldClose(window) == GLFW_FALSE) {
     float now = static_cast<float>(glfwGetTime());
@@ -338,6 +335,23 @@ void Main() {
     auto MD = translation(Plane.Center, Plane.Position);
     shader.Set("M", MD);
     PlaneMesh.Draw();
+    // 对于深度测试，是通过比较深度，决定天空盒片元能不能显示，确保它被前面的物体遮挡
+    // 对于深度写入，是片元通过深度测试后是否用它的深度更新缓冲中的记录，控制写入的函数时glDepthMask
+    // 这里关闭深度写入是为了让天空盒提供背景色同时保留原来的深度记录，不会让天空盒自己的深度影响真正要绘制的对象不被错误遮挡
+    // 深度测试仍然开启使得前面的物体依然可以遮挡背景
+    //  绘制skybox
+    glDepthMask(GL_FALSE);
+    skyboxshader.Use();
+    skyboxshader.Set("V", V);
+    skyboxshader.Set("P", P);
+    glActiveTexture(GL_TEXTURE0);
+    texture.Bind();
+    // 第一个参数表示设置该程序中哪个uniform，第二个表示让这个采样器使用纹理单元0
+    skyboxshader.Set("skyboxTexture", 0);
+    glDepthFunc(GL_LEQUAL);
+    skyboxMesh.Draw();
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
     // 绘制准星
     glDisable(GL_DEPTH_TEST);
     crosshairshader.Use();
