@@ -82,6 +82,24 @@ void MouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
   }
 }
 
+struct PointLight {
+  cs171::Vec3f<>::AsStorage Color;
+  cs171::Vec3f<>::AsStorage Position;
+};
+
+struct SpotLight {
+  cs171::Vec3f<>::AsStorage Color;
+  cs171::Vec3f<>::AsStorage Position;
+  cs171::Vec3f<>::AsStorage Direction;
+  float CosCutoff;
+};
+
+struct Object {
+  cs171::Vec3f<>::AsStorage Center;
+  cs171::Vec3f<>::AsStorage Position;
+  float Scale = 1.0f;
+};
+
 void Main() {
   using namespace cs171;
 
@@ -96,8 +114,18 @@ void Main() {
   Mesh BunnyMesh{"./assets/Bunny.object"};
   Mesh PlaneMesh{"./assets/Plane.object"};
   // 变量声明阶段
-  int select = -1; // -1代表未选中，0代表选择球体A，1代表选择球体B,2代表选中兔子
+  // 点光源
+  PointLight PL1;
+  PL1.Position = Vec3f{5.0f, 5.0f, 5.0f};
+  PL1.Color = Vec3f{1.0f, 1.0f, 1.0f};
+  // 聚光源
+  SpotLight SL1;
+  SL1.CosCutoff = std::cos(30.0f * pi<float> / 180.0f); // 光锥半角
+  SL1.Position = Vec3f{-5.0f, 5.0f, -5.0f};
+  SL1.Color = Vec3f{0.96f, 0.47f, 0.47f};
+  SL1.Direction = Vec3f{5.0f, -2.0f, 8.0f};
 
+  int select = -1; // -1代表未选中，0代表选择球体A，1代表选择球体B,2代表选中兔子
   float aspect = 1280.0f / 720.0f;
   float ka = 0.15; // 环境光强度
   float ks = 0.5f; // 镜面反射系数
@@ -113,28 +141,33 @@ void Main() {
 
   double cameraYaw = 0.0;
   double cameraPitch = 0.0;
-
+  // 坐标
   Vec3f origin{0.0f, 0.0f, 0.0f};
   Vec3f up{0.0f, 1.0f, 0.0f};
   Vec3f right{1.0f, 0.0f, 0.0f};
   Vec3f forward{0.0f, 0.0f, -1.0f};
-  Vec3f axis{0.0f, 1.0f, 0.0f};
-  Vec3f direction{0.0f, 0.0f, -1.0f};
-  Vec3f light{1.0f, 1.0f, 1.0f};
-  Vec3f material{0.2f, 0.5f, 0.9f};
-  Vec3f lightPosition{5.0f, 5.0f, 5.0f};
+  // 摄像机
   Vec3f eye{0.0f, 0.0f, 3.0f};
-  // 物体的中心坐标
-  Vec3f SphereCenterA{0.0f, 0.5f, 0.0f};
-  Vec3f SphereCenterB{0.0f, 0.5f, 0.0f};
-  Vec3f BunnyCenter{-0.01f, 0.11f, 0.0f};
-  Vec3f PlaneCenter{0.0f, 0.0f, -1.0f};
-  // 物体的实时坐标
-  Vec3f SphereAToPos{3.0f, 0.0f, 3.0f};
-  Vec3f SphereBToPos{-3.0f, 0.0f, 3.0f};
-  Vec3f BunnyToPos{0.0f, 5.0f, 3.0f};
-  Vec3f PlaneToPos{0.0f, -5.0f, 3.0f};
+  Vec3f direction{0.0f, 0.0f, -1.0f};
+  Vec3f ambientColor{0.8f, 0.8f, 0.8f}; // 环境光
+  Vec3f material{0.2f, 0.5f, 0.9f};
 
+  Object Sphere1;
+  Object Sphere2;
+  Object Bunny;
+  Object Plane;
+  // 物体的中心坐标
+  Sphere1.Center = Vec3f{0.0f, 0.5f, 0.0f};
+  Sphere2.Center = Vec3f{0.0f, 0.5f, 0.0f};
+  Bunny.Center = Vec3f{-0.01f, 0.11f, 0.0f};
+  Plane.Center = Vec3f{0.0f, 0.0f, -1.0f};
+  // 物体的实时坐标
+  Sphere1.Position = Vec3f{3.0f, 0.0f, 3.0f};
+  Sphere2.Position = Vec3f{-3.0f, 0.0f, 3.0f};
+  Bunny.Position = Vec3f{0.0f, 5.0f, 3.0f};
+  Plane.Position = Vec3f{0.0f, -5.0f, 3.0f};
+  // 物体的放大倍数
+  Bunny.Scale = 20.0f;
   Vec4f objectCatchPosition{0.0f, 0.0f, 0.0f, 1.0f}; // 用于在点选成功后保存抓取时的相机空间位置
   glEnable(GL_DEPTH_TEST);
   // 进入循环之前的时间记录
@@ -198,29 +231,29 @@ void Main() {
     // 鼠标点击的作用
     if (mouse.leftPressed) {
       std::vector<float> T;
-      float tA = OnSphere(eye, direction, 2.55f, SphereAToPos);
-      float tB = OnSphere(eye, direction, 2.55f, SphereBToPos);
-      float tC = OnSphere(eye, direction, 2.19f, BunnyToPos);
-      float tD = OnPlane(eye, direction, 1.0f, PlaneToPos, Vec3f{0.0f, 0.0f, 1.0f});
+      float tA = OnSphere(eye, direction, 2.55f, Sphere1.Position);
+      float tB = OnSphere(eye, direction, 2.55f, Sphere2.Position);
+      float tC = OnSphere(eye, direction, 2.19f, Bunny.Position);
+      float tD = OnPlane(eye, direction, 1.0f, Plane.Position, Vec3f{0.0f, 0.0f, 1.0f});
       T.push_back(tA);
       T.push_back(tB);
       T.push_back(tC);
       T.push_back(tD);
       select = nearestHitIndex(T);
       if (select == 0) {
-        Vec4f homogeneous{SphereAToPos(0), SphereAToPos(1), SphereAToPos(2), 1.0f};
+        Vec4f homogeneous{Sphere1.Position(0), Sphere1.Position(1), Sphere1.Position(2), 1.0f};
         objectCatchPosition = V * homogeneous;
       }
       if (select == 1) {
-        Vec4f homogeneous{SphereBToPos(0), SphereBToPos(1), SphereBToPos(2), 1.0f};
+        Vec4f homogeneous{Sphere2.Position(0), Sphere2.Position(1), Sphere2.Position(2), 1.0f};
         objectCatchPosition = V * homogeneous;
       }
       if (select == 2) {
-        Vec4f homogeneous{BunnyToPos(0), BunnyToPos(1), BunnyToPos(2), 1.0f};
+        Vec4f homogeneous{Bunny.Position(0), Bunny.Position(1), Bunny.Position(2), 1.0f};
         objectCatchPosition = V * homogeneous;
       }
       if (select == 3) {
-        Vec4f homogeneous{PlaneToPos(0), PlaneToPos(1), PlaneToPos(2), 1.0f};
+        Vec4f homogeneous{Plane.Position(0), Plane.Position(1), Plane.Position(2), 1.0f};
         objectCatchPosition = V * homogeneous;
       }
       mouse.leftPressed = false;
@@ -238,18 +271,23 @@ void Main() {
     shader.Set("P", P);
     shader.Set("ka", ka);
     shader.Set("ks", ks);
-    shader.Set("light", light);
+    shader.Set("pointColor", PL1.Color);
     shader.Set("material", material);
-    shader.Set("lightPosition", lightPosition);
+    shader.Set("pointPosition", PL1.Position);
+    shader.Set("ambientColor", ambientColor);
+    shader.Set("gDirection", SL1.Direction);
+    shader.Set("gCosCutoff", SL1.CosCutoff);
+    shader.Set("glightPosition", SL1.Position);
+    shader.Set("gColor", SL1.Color);
     glClearColor(0.1F, 0.2F, 0.3F, 1.0F);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     // 画A球体
     if (select == 0) {
       auto temp = V.Inverse() * objectCatchPosition;
       Vec3f position{temp(0), temp(1), temp(2)};
-      SphereAToPos = position;
+      Sphere1.Position = position;
     }
-    auto MA = translation(SphereCenterA, SphereAToPos);
+    auto MA = translation(Sphere1.Center, Sphere1.Position);
     shader.Set("M", MA);
     SphereMesh.Draw();
 
@@ -257,9 +295,9 @@ void Main() {
     if (select == 1) {
       auto temp = V.Inverse() * objectCatchPosition;
       Vec3f position{temp(0), temp(1), temp(2)};
-      SphereBToPos = position;
+      Sphere2.Position = position;
     }
-    auto MB = translation(SphereCenterB, SphereBToPos);
+    auto MB = translation(Sphere2.Center, Sphere2.Position);
     shader.Set("M", MB);
     SphereMesh2.Draw();
 
@@ -267,11 +305,11 @@ void Main() {
     if (select == 2) {
       auto temp = V.Inverse() * objectCatchPosition;
       Vec3f position{temp(0), temp(1), temp(2)};
-      BunnyToPos = position;
+      Bunny.Position = position;
     }
-    auto BunnyT1 = translation(BunnyCenter, origin);
-    auto BunnyT2 = translation(origin, BunnyToPos);
-    auto BunnyS = scale(20.0f);
+    auto BunnyT1 = translation(Bunny.Center, origin);
+    auto BunnyT2 = translation(origin, Bunny.Position);
+    auto BunnyS = scale(Bunny.Scale);
     auto MC = BunnyT2 * BunnyS * BunnyT1;
     shader.Set("M", MC);
     BunnyMesh.Draw();
@@ -279,9 +317,9 @@ void Main() {
     if (select == 3) {
       auto temp = V.Inverse() * objectCatchPosition;
       Vec3f position{temp(0), temp(1), temp(2)};
-      PlaneToPos = position;
+      Plane.Position = position;
     }
-    auto MD = translation(PlaneCenter, PlaneToPos);
+    auto MD = translation(Plane.Center, Plane.Position);
     shader.Set("M", MD);
     PlaneMesh.Draw();
     // 绘制准星
