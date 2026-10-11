@@ -121,13 +121,13 @@ void Main() {
   // 点光源
   PointLight PL1;
   PL1.Position = Vec3f{5.0f, 5.0f, 5.0f};
-  PL1.Color = Vec3f{1.0f, 1.0f, 1.0f};
+  PL1.Color = Vec3f{0.0f, 0.0f, 1.0f};
   // 聚光源
   SpotLight SL1;
   SL1.CosCutoff = std::cos(30.0f * pi<float> / 180.0f); // 光锥半角
-  SL1.Position = Vec3f{-5.0f, 5.0f, -5.0f};
-  SL1.Color = Vec3f{0.96f, 0.47f, 0.47f};
-  SL1.Direction = Vec3f{5.0f, -2.0f, 8.0f};
+  SL1.Position = Vec3f{4.0f, 2.0f, 8.0f};
+  SL1.Color = Vec3f{1.0f, 0.0f, 0.0f};
+  SL1.Direction = Vec3f{-5.0f, 0.0f, -5.0f};
 
   int select = -1; // -1代表未选中，0代表选择球体A，1代表选择球体B,2代表选中兔子
   float aspect = 1280.0f / 720.0f;
